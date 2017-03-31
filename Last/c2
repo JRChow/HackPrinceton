@@ -1,0 +1,54 @@
+#!/usr/bin/python
+from __future__ import print_function
+import sys
+import re
+import tempfile
+import bz2
+
+dump = []
+
+def printItems(prevQuery, query, space):
+	# and then save the new query to that
+	global dump
+	if prevQuery is None:
+		dump.append(str(query))
+	elif int(query) - int(prevQuery) != 0:
+		dump.append(str(int(query) - int(prevQuery)))
+	dump.append(str(space))
+	return int(query)
+
+
+
+def readFile(file):
+	days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+	months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+	tz = ['EDT', 'EST']
+
+	items = {"prevNum": None, "prevDayWeek": None, "prevMonth": None, "prevDay": None, "prevHour": None, "prevMin": None, "prevSec": None, "prevTZ": None, "prevYear": None}
+
+	
+	with open(file) as f:
+
+		for line in f:
+			spaces = re.findall(r'\s+|:', line)
+			curLine = re.split(r'\s+|:', line)
+
+			items["prevNum"] = printItems(items["prevNum"], curLine[0].replace(",", ""), spaces[0])
+			items["prevDayWeek"] = printItems(items["prevDayWeek"], days.index(curLine[1]), spaces[1])
+			items["prevMonth"] = printItems(items["prevMonth"], months.index(curLine[2]), spaces[2])
+			items["prevDay"] = printItems(items["prevDay"], curLine[3], spaces[3])
+			items["prevHour"] = printItems(items["prevHour"], curLine[4], spaces[4])
+			items["prevMin"] = printItems(items["prevMin"], curLine[5], spaces[5])
+			items["prevSec"] = printItems(items["prevSec"], curLine[6], spaces[6])
+			items["prevTZ"] = printItems(items["prevTZ"], tz.index(curLine[7]), spaces[7])
+			items["prevYear"] = printItems(items["prevYear"], curLine[8], spaces[8])
+		data = "".join(dump)
+		compressed = bz2.compress(data)
+		print(compressed)
+
+
+
+def main():
+	readFile(sys.argv[1])
+
+main()

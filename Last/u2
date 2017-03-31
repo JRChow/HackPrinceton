@@ -1,0 +1,127 @@
+#!/usr/bin/python
+from __future__ import print_function
+import sys
+import re
+import tempfile
+import bz2
+
+dump = []
+items = []
+
+def decode(line):
+	# and then save the new query to that
+	days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+	months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+	tz = ['EDT', 'EST']
+	# split it three times into form:
+	# ['349', ['5', '6', '15', ['05', '08', '02'], '0', '2001']]
+	curLine = line.split('\t')
+	curLine[1] = curLine[1].split(' ')
+	curLine[1][3] = curLine[1][3].split(':')
+
+	global items
+
+	if len(items) == 0:
+		items = populated(curLine)
+		print(items[0], end = '\t')
+		print(days[int(items[1][0])], end = ' ')
+		print(months[int(items[1][1])], end = ' ')
+		print(items[1][2], end = ' ')
+
+		for i in range(len(items[1][3])):
+			if i != 2:
+				print(items[1][3][i], end = ':')
+			else:
+				print(items[1][3][i], end = ' ')
+		print(tz[int(items[1][4])], end = ' ')
+		print(items[1][5], end = '\n')
+
+	else:
+		items[0] = printNum(curLine[0], int(items[0]))
+		items[1][0] = printType(curLine[1][0], int(items[1][0]), days)
+		items[1][1] = printType(curLine[1][1], int(items[1][1]), months)
+		items[1][2] = printReg(curLine[1][2], int(items[1][2]), "mid")
+		for i in range(len(items[1][3])):
+			items[1][3][i] = printTime(curLine[1][3][i], int(items[1][3][i]), i)
+		items[1][4] = printType(curLine[1][4], int(items[1][4]), tz)
+		items[1][5] = printReg(curLine[1][5], int(items[1][5]), "end");
+
+
+def printTime(num, orig, iter):
+	if num != '':
+		num = int(num)
+		num = num + orig
+	if num == '':
+		num = orig
+	if num < 10:
+		num = '0' + str(num)
+	if iter != 2:
+		print(num, end = ':')
+	else:
+		print(num, end = ' ')
+	return num
+
+def printNum(num, orig):
+	if num != '':
+		num = int(num)
+		num = num + orig
+	if num == '':
+		num = orig
+	if num >= 1000:
+		rem = num % 1000
+		pre = (num - rem) / 1000
+		leading = ''
+		if rem/100 == 0:
+			leading = '0'
+		if rem/10 == 0:
+			leading = '00'
+		s = '' + str(pre) + ',' + leading + str(rem)
+	if num < 1000:
+		s = str(num)
+	print(s, end = '\t')
+	return num
+
+def printType(num, orig, kind):
+	if num != '':
+		num = int(num)
+		num = num + orig
+	if num == '':
+		num = orig
+	print(kind[num], end = ' ')
+	return num
+
+def printReg(num, orig, kind):
+	if num != '':
+		num = int(num)
+		num = num + orig
+	if num == '':
+		num = orig
+	if kind == 'mid':
+		print(num, end = ' ')
+	else:
+		print(num, end = '\n')
+	return num
+
+def populated(curLine):
+	for num in curLine:
+		items.append(num)
+	return items
+
+def readFile(file):	
+	uncompressedData = bz2.BZ2File(file).read()
+	# print(uncompressedData)
+	actLines = uncompressedData.split('\n')
+	# print(actLines)
+
+	for each in actLines:
+		if each == '':
+			break
+		if each.strip() == "":
+			break
+		decode(each)
+
+
+def main():
+	readFile(sys.argv[1])
+
+main()
